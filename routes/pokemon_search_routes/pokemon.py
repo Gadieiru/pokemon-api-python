@@ -53,3 +53,10 @@ def get_pokemons():
         return jsonify({"ERROR": "No se pudo leer la tabla", "detalles": str(e)}), 500
         
 
+#feat: (nueva funcionalidad) -> git commit -m "feat: endpoint para obtener pokemon por tipo"
+
+#fix: (corrección de un error) -> git commit -m "fix: error en la conexión a MySQL"
+
+#refactor: (mejora de código sin cambiar funcionalidad) -> git commit -m "refactor: optimización de la lógica en la API REST"
+
+#docs: cuando es documentacion.
