@@ -5,6 +5,7 @@ from flask import Blueprint, jsonify, request
 from sqlalchemy import text
 from middleware.auth import token_required
 from middleware.upload import save_pokemon_img 
+from utils.file_handler import delete_file
 
 crud_bp = Blueprint('crud_bp', __name__)
 
@@ -50,7 +51,7 @@ def get_crud():
         print(f"Ha ocurrido un error en la peticion: {e}")
         return jsonify({"error": str(e)}), 500
     
-@crud_bp.route('', methods=['GET'])
+@crud_bp.route('', methods=['POST'])
 @token_required
 def create_pokemons(current_user):
     pokemon_name = request.form.get('pokemon_name')
@@ -83,4 +84,32 @@ def create_pokemons(current_user):
         db.session.rollback()
         print("error en la creacion")
         return jsonify({"error": str(e)}), 500
+    
+@crud_bp.route('/<int:pokemon_id>', methods=['DELETE'])
+@token_required
+def delete_pokemon(current_user, pokemon_id):
+    try:
+        search_query = text("SELECT pokemon_img FROM pokemon WHERE pokemon_id = :id")
+        pokemon = db.session.execute(search_query, {"id": pokemon_id}).fetchone()
+    
+        if not pokemon: 
+            return jsonify({"error": "Pokemon no encontrado"})
+        
+        img_to_delete = pokemon[0] 
+    
+        db.session.execute(text("DELETE FROM pokemon_types WHERE pokemon_id = :id"), {"id": pokemon_id})
+        db.session.execute(text("DELETE FROM pokemon_location WHERE pokemon_id = :id"), {"id": pokemon_id})
+    
+        db.session.execute(text("DELETE FROM pokemon WHERE pokemon_Id = :id"), {"id": pokemon_id})
+    
+        db.session.commit()
+    
+        if img_to_delete:
+            delete_file(img_to_delete)
+        
+        return jsonify({"message": f"Pokemon {pokemon_id} y su imagen fueron eliminados"}), 200
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500 
         
