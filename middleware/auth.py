@@ -9,7 +9,7 @@ def token_required(f):
         token = request.cookies.get('access_token')
     
         if not token:
-            return jsonify({"error": "No has iniciado sesion"})
+            return jsonify({"error": "No has iniciado sesion"}), 401
         
         try:
             data = jwt.decode(
@@ -21,7 +21,7 @@ def token_required(f):
         except jwt.ExpiredSignatureError:
             return jsonify({"error": "Tu sesion ha expirado."}), 401
         except jwt.InvalidTokenError:
-            return jsonify({"error": "Sesion invalida"})
+            return jsonify({"error": "Sesion invalida"}),401
         
         return f(current_user, *args, **kwargs)
     
