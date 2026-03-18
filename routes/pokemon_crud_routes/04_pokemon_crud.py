@@ -57,16 +57,15 @@ def create_pokemons(current_user):
     pokemon_name = request.form.get('pokemon_name')
     rarity_id = request.form.get('rarity_id')
     file = request.files.get('pokemon_img')
-    
-    img_path = save_pokemon_img(file if file else None)
         
     if not pokemon_name or not rarity_id:
         return jsonify({"error": "Faltan campos"}),400
     
     try:
+        img_path = save_pokemon_img(file) if file else None
+        
         insert_pk =text("INSERT INTO pokemon (pokemon_name, rarity_id, pokemon_img) VALUES (:name, :rarity, :image)")
-        db.session.execute(insert_pk, {"name": pokemon_name, "rarity": rarity_id, "img": img_path})
-        db.session.commit()
+        db.session.execute(insert_pk, {"name": pokemon_name, "rarity": rarity_id, "image": img_path})
         
         new_id = db.session.execute(text("SELECT LAST_INSERT_ID()")).scalar()
         
@@ -84,6 +83,59 @@ def create_pokemons(current_user):
         db.session.rollback()
         print("error en la creacion")
         return jsonify({"error": str(e)}), 500
+    
+@crud_bp.route('/<int:pokemon_id>', methods=['PUT'])
+@token_required
+def update_pokemon(current_user, pokemon_id):
+        name = request.form.get('pokemon_name')
+        rarity = request.form.get('rarity_id')
+        happiness = request.form.get('initial_happiness')
+        file = request.files.get('pokemon_img')
+               
+        try:
+            search_query = text("SELECT pokemon_img FROM pokemon WHERE pokemon_id = :id") 
+            current_data = db.session.execute(search_query, {"id": pokemon_id}).fetchone()
+        
+            if not current_data:
+                return jsonify({"error": "Pokémon no encontrado"}), 404
+        
+            old_img_path = current_data[0]
+            new_img_path = old_img_path
+             
+            if file:
+                new_img_path = save_pokemon_img(file)
+                if old_img_path:
+                    delete_file(old_img_path)
+            
+            update_sql = text("""
+                UPDATE pokemon SET pokemon_name = :name, rarity_id = :rarity, 
+                initial_happiness = :happiness, pokemon_img = :image WHERE pokemon_id = :id
+            """)
+            db.session.execute(update_sql, {
+                "name": name, 
+                "rarity": rarity, 
+                "happiness": happiness, 
+                "image": new_img_path, 
+                "id": pokemon_id
+            })
+            
+            db.session.execute(text("DELETE FROM pokemon_types WHERE pokemon_id = :id"), {"id": pokemon_id})
+            type_ids = json.loads(request.form.get('type_id', '[]'))
+            for tid in type_ids:
+                db.session.execute(text("INSERT INTO pokemon_types (pokemon_id, types_id) VALUES (:pid, :tid)"), {"pid": pokemon_id, "tid": tid})
+                
+            db.session.execute(text("DELETE FROM pokemon_location WHERE pokemon_id = :id"), {"id": pokemon_id})
+            location_ids = json.loads(request.form.get('location_id', '[]'))
+            for lid in location_ids:
+                db.session.execute(text("INSERT INTO pokemon_location (pokemon_id, location_id) VALUES (:pid, :lid)"), {"pid": pokemon_id, "lid": lid})
+                
+            db.session.commit()
+            return jsonify({"message":"Actualizado correctamente"}), 200
+    
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error: {e}")
+            return jsonify({"error": str(e)})             
     
 @crud_bp.route('/<int:pokemon_id>', methods=['DELETE'])
 @token_required
