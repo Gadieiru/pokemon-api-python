@@ -12,14 +12,14 @@ def token_required(f):
     
         if not token and 'Authorization' in request.headers:
             auth_header = request.headers['Authorization']
-        if 'Bearer' in auth_header:
-            token = auth_header.split(" ")[1]
+            if 'Bearer' in auth_header:
+                token = auth_header.split(" ")[1]
         
         if not token:
             return jsonify({"error": "No has iniciado sesion"}), 401
         
         try:
-            secret = os.getenv('JWT_SECRET', 'clave_secreta_super_segura_123')
+            secret = os.getenv('JWT_SECRET', 'MiClaveSuperSecretaYMuyLarga123!')
             data = jwt.decode(token, secret, algorithms=["HS256"])
             
             query = text("SELECT id, firstname, lastname, email FROM users WHERE id = :id")
@@ -28,7 +28,7 @@ def token_required(f):
             if not user_data:
                 return jsonify({"error": "Usuario no encontrado"}), 401
             
-            current_user = data   
+            current_user = user_data   
             
         except jwt.ExpiredSignatureError:
             return jsonify({"error": "Tu sesion ha expirado."}), 401

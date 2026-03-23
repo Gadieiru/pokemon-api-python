@@ -83,7 +83,7 @@ def login():
             'id': user.id,
             'email': user.email,
             'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=2)
-        }, os.getenv('JWT_SECRET', 'clave_secreta_super_segura_123'), algorithm="HS256")
+        }, os.getenv('JWT_SECRET', 'MiClaveSuperSecretaYMuyLarga123!'), algorithm="HS256")
         
         response = make_response(jsonify({
             "message": "Login exitoso desde Python",
