@@ -14,6 +14,8 @@ crud_bp = Blueprint('crud_bp', __name__)
 @token_required
 def get_crud(current_user):
     try:
+        if not current_user.id:
+            return jsonify({"error": "Identidad de usuario no valida"}), 403
         
         query = text("""
                      SELECT 
@@ -52,7 +54,7 @@ def get_crud(current_user):
         
     except Exception as e:
         print(f"Ha ocurrido un error en la peticion: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "No pudo procesar la solicitud del usuario"}), 500
     
 #Leer   
 @crud_bp.route('', methods=['POST'])
@@ -67,6 +69,12 @@ def create_pokemons(current_user):
         return jsonify({"error": "Faltan campos"}),400
     
     try:
+        count_query = text("SELECT COUNT(*) FROM pokemon WHERE user_id = :u_id")
+        total_count = db.session.execute(count_query, {"u_id": current_user.id}).scalar()
+
+        if total_count >= 50: # Límite de 50 pokemon por usuario
+            return jsonify({"error": "Has alcanzado el límite máximo de tu colección"}), 402
+    
         img_path = save_pokemon_img(file) if file else None
         
         insert_pk =text("INSERT INTO pokemon (pokemon_name, rarity_id, pokemon_img, user_id) VALUES (:name, :rarity, :image, :u_id)")
@@ -114,7 +122,7 @@ def update_pokemon(current_user, pokemon_id):
             current_data = db.session.execute(search_query, {"id": pokemon_id, "u_id": current_user.id}).fetchone()
         
             if not current_data:
-                return jsonify({"error": "Pokémon no encontrado"}), 404
+                return jsonify({"error": "Pokémon no encontrado o acceso denegado"}), 404
         
             old_img_path = current_data[0]
             new_img_path = old_img_path
