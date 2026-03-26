@@ -22,7 +22,7 @@ def get_pokemons():
                      p.pokemon_img, 
                      p.capture_rate,
                      GROUP_CONCAT(DISTINCT t.type_name SEPARATOR '/') as types, 
-                     GROUP_CONCAT(DISTINCT l.location_name SEPARATOR '/') as locations          
+                     GROUP_CONCAT(DISTINCT l.location_name SEPARATOR ',') as locations          
                 FROM pokemon_database.pokemon p 
                 LEFT JOIN rarity r ON p.rarity_id = r.rarity_id 
                 LEFT JOIN pokemon_types pt ON p.pokemon_id = pt.pokemon_id 
