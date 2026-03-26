@@ -20,6 +20,7 @@ def get_pokemons():
                      p.initial_happiness, 
                      p.pokemon_name, 
                      p.pokemon_img, 
+                     p.capture_rate,
                      GROUP_CONCAT(DISTINCT t.type_name SEPARATOR '/') as types, 
                      GROUP_CONCAT(DISTINCT l.location_name SEPARATOR '/') as locations          
                 FROM pokemon_database.pokemon p 
