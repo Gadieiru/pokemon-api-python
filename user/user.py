@@ -39,6 +39,7 @@ def register():
             return jsonify({"error": "Email ya registrado"}), 400
         
         hashed_password = generate_password_hash(password)
+        print(f"DEBUG HASH: {hashed_password}")
         
         insert_query = text("""
             INSERT INTO users (firstname, lastname, email, password_hash) 
@@ -67,41 +68,55 @@ def login():
     password = data.get('password')
     
     if not email or not password:
-            return jsonify({"error": "Faltan coincidencias"})
+        return jsonify({"error": "Email y contraseña requeridos"}), 400
     
     try:
-        query = text("SELECT * FROM users WHERE email = :email")
-        user = db.session.execute(query, {"email": email}).fetchone()
+        query = text("SELECT id, firstname,email, password_hash FROM users WHERE email = :email")
+        result = db.session.execute(query, {"email": email}).mappings().fetchone()
         
-        if not user:
+        if not result:
             return jsonify({"error": "Usuario no encontrado"}), 401
         
-        if not check_password_hash(user.password_hash, password):
+        # Comparamos la contraseña usando el nombre de la columna en la DB
+        if not check_password_hash(result['password_hash'], password):
             return jsonify({"error": "Credenciales invalidas"}), 401
         
-        token = jwt.sign({
-            'id': user.id,
-            'email': user.email,
-            'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=2)
-        }, os.getenv('JWT_SECRET', 'MiClaveSuperSecretaYMuyLarga123!'), algorithm="HS256")
+        # --- CORRECCIÓN JWT: jwt.encode en lugar de jwt.sign ---
+        secret = os.getenv('JWT_SECRET', 'MiClaveSuperSecretaYMuyLarga123!')
         
+        payload = {
+            'id': result['id'],
+            'email': result['email'],
+            'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=2)
+        }
+        
+        token = jwt.encode(payload, secret, algorithm="HS256")
+        
+        # En algunas versiones de PyJWT token puede ser bytes, aseguramos string:
+        token_str = token if isinstance(token, str) else token.decode('utf-8')
+
         response = make_response(jsonify({
             "message": "Login exitoso desde Python",
-            "user": {"firstname": user.firstname, "email": user.email}
+            "user": {
+                "firstname": result['firstname'], 
+                "email": result['email']
+            }
         }))
         
         response.set_cookie(
             'access_token', 
-            token, 
+            token_str, 
             httponly=True,
+            secure=False, # Ponlo en True si usas HTTPS
             samesite='Lax',
-            max_age=7200 # 2 horas
+            max_age=7200
         )
     
         return response
     
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"Error en login: {e}") # Para que lo veas en tu consola
+        return jsonify({"error": "Error interno del servidor"}), 500
     
 @user_bp.route('/logout', methods=['POST'])
 def logout():
