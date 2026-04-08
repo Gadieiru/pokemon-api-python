@@ -13,11 +13,11 @@ user_bp = Blueprint('user_bp', __name__)
 @token_required
 def get_profile(current_user):
     return jsonify({
-        "id": current_user.id,
-        "firstname": current_user.firstname,
-        "lastname": current_user.lastname,
-        "email": current_user.email,
-        "message": f"Hola {current_user.firstname}, acceso concedido"
+        "id": current_user['id'],
+        "firstname": current_user['firstname'],
+        "lastname": current_user['lastname'],
+        "email": current_user['email'],
+        "message": f"Hola {current_user['firstname']}, acceso concedido"
     }), 200
     
 @user_bp.route('/register', methods=['POST'])
@@ -96,6 +96,7 @@ def login():
         token_str = token if isinstance(token, str) else token.decode('utf-8')
 
         response = make_response(jsonify({
+            "token": token_str,
             "message": "Login exitoso desde Python",
             "user": {
                 "firstname": result['firstname'], 
@@ -107,9 +108,10 @@ def login():
             'access_token', 
             token_str, 
             httponly=True,
-            secure=False, # Ponlo en True si usas HTTPS
+            secure=False, 
             samesite='Lax',
-            max_age=7200
+            max_age=7200,
+            path='/'
         )
     
         return response

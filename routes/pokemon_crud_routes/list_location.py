@@ -4,8 +4,8 @@ from sqlalchemy import text
 
 location_bp = Blueprint('location_bp', __name__)
 
-@location_bp.route('/rarity', methods=['GET'])
-def get_rarity():
+@location_bp.route('/location', methods=['GET'])
+def get_location():
     try:
         
         query = text("""

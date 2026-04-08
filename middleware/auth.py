@@ -8,22 +8,26 @@ from sqlalchemy import text
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = request.cookies.get('access_token')
+        token = None
     
-        if not token and 'Authorization' in request.headers:
+        if 'Authorization' in request.headers:
             auth_header = request.headers['Authorization']
             if 'Bearer' in auth_header:
                 token = auth_header.split(" ")[1]
+                
+        if not token:
+            token = request.cookies.get('access_token')
         
         if not token:
             return jsonify({"error": "No has iniciado sesion"}), 401
         
         try:
-            secret = os.getenv('JWT_SECRET', 'MiClaveSuperSecretaYMuyLarga123!')
+            secret = os.getenv('JWT_SECRET','MiClaveSuperSecretaYMuyLarga123!')
+            print(f"DEBUG: El secreto cargado es: '{secret}'")
             data = jwt.decode(token, secret, algorithms=["HS256"])
             
             query = text("SELECT id, firstname, lastname, email FROM users WHERE id = :id")
-            user_data = db.session.execute(query, {"id": data['id']}).fetchone()
+            user_data = db.session.execute(query, {"id": data['id']}).mappings().fetchone()
             
             if not user_data:
                 return jsonify({"error": "Usuario no encontrado"}), 401
@@ -33,7 +37,10 @@ def token_required(f):
         except jwt.ExpiredSignatureError:
             return jsonify({"error": "Tu sesion ha expirado."}), 401
         except jwt.InvalidTokenError:
-            return jsonify({"error": "Sesion invalida"}),401
+            return jsonify({"error": "Sesion invalida"}), 401
+        except Exception as e:
+            print(f"Error decodificando token: {e}")
+            return jsonify({"error": "Sesion invalida"}), 401
         
         return f(current_user, *args, **kwargs)
     
